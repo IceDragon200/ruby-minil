@@ -16,3 +16,13 @@ tmp
 .yardoc
 _yardoc
 doc/
+
+# Extension artifacts
+ext/*.a
+ext/*.o
+ext/*.so
+ext/Makefile
+ext/mkmf.log
+
+# Platform specific
+lib/*.so
