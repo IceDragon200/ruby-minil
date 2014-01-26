@@ -63,6 +63,7 @@ static mil_Image_t*
 mil_Image_copy(mil_Image_t *dst_image, mil_Image_t *src_image)
 {
   memcpy(dst_image, src_image, sizeof(mil_Image_t));
+  dst_image->data = (uint8_t*)malloc(sizeof(uint8_t) * dst_image->size);
   memcpy(dst_image->data, src_image->data, src_image->size);
   return dst_image;
 }
