@@ -1,1 +1,4 @@
-require_relative 'minil_ext'
+require 'minil_ext'
+require 'minil/functions'
+require 'minil/color'
+require 'minil/rect'
