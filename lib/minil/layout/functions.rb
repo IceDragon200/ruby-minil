@@ -3,60 +3,68 @@ require 'minil/rect'
 
 module Minil
   module Layout
+    def slice_vert(r, func1, func2)
+      lambda do |image, rect, options|
+        rect1 = rect.dup
+        rect2 = rect.dup
+        rect1.height *= r
+        rect2.height -= rect1.height
+        rect2.y += rect1.height
+        func1.call(image, rect1, options)
+        func2.call(image, rect2, options)
+      end
+    end
+
+    def slice_horz(r, func1, func2)
+      lambda do |image, rect, options|
+        rect1 = rect.dup
+        rect2 = rect.dup
+        rect1.width *= r
+        rect2.width -= rect1.width
+        rect2.x += rect1.width
+        func1.call(image, rect1, options)
+        func2.call(image, rect2, options)
+      end
+    end
+
     def slice(vertical, r, func1, func2)
       if vertical
-        lambda do |image, rect, options|
-          rect1 = rect.dup
-          rect2 = rect.dup
-          rect1.height *= r
-          rect2.height -= rect1.height
-          rect2.y += rect1.height
-          func1.call(image, rect1, options)
-          func2.call(image, rect2, options)
-        end
+        slice_vert(r, func1, func2)
       else
-        lambda do |image, rect, options|
-          rect1 = rect.dup
-          rect2 = rect.dup
-          rect1.width *= r
-          rect2.width -= rect1.width
-          rect2.x += rect1.width
-          func1.call(image, rect1, options)
-          func2.call(image, rect2, options)
+        slice_horz(r, func1, func2)
+      end
+    end
+
+    def split_vert(*funcs)
+      lambda do |image, rect, options|
+        ch = rect.height / funcs.size
+        funcs.each_with_index do |func, i|
+          cell = rect.dup
+          cell.height = ch
+          cell.y += ch * i
+          func.call(image, cell, options)
+        end
+      end
+    end
+
+    def split_horz(*funcs)
+      lambda do |image, rect, options|
+        cw = rect.width / funcs.size
+        funcs.each_with_index do |func, i|
+          cell = rect.dup
+          cell.width = cw
+          cell.x += cw * i
+          func.call(image, cell, options)
         end
       end
     end
 
     def split(vertical, *funcs)
       if vertical
-        lambda do |image, rect, options|
-          ch = rect.height / funcs.size
-          funcs.each_with_index do |func, i|
-            cell = rect.dup
-            cell.height = ch
-            cell.y += ch * i
-            func.call(image, cell, options)
-          end
-        end
+        split_vert(*funcs)
       else
-        lambda do |image, rect, options|
-          cw = rect.width / funcs.size
-          funcs.each_with_index do |func, i|
-            cell = rect.dup
-            cell.width = cw
-            cell.x += cw * i
-            func.call(image, cell, options)
-          end
-        end
+        split_horz(*funcs)
       end
-    end
-
-    def split_horz(*funcs)
-      split(false, *funcs)
-    end
-
-    def split_vert(*funcs)
-      split(true, *funcs)
     end
 
     def chain(*funcs)
