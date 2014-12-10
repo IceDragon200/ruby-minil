@@ -199,14 +199,14 @@ describe Image do
   context '#load_file' do
     it 'should load an image file' do
       img = Image.new
-      img.load_file(File.expand_path('test_img.png', File.dirname(__FILE__)))
+      img.load_file(data_path('test_img.png'))
       img
     end
   end
 
   context '#save_file' do
     it 'should save to file' do
-      imag.save_file(File.expand_path('test_img_save.png', File.dirname(__FILE__)))
+      imag.save_file(output_path('test_img_save.png'))
     end
   end
 end

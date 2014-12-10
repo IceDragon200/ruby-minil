@@ -1,6 +1,15 @@
-$LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))
-require 'minil'
-require 'minil/functions'
-require 'minil/rect'
-require 'minil/color'
-require 'minil/color/blender'
+require 'codeclimate-test-reporter'
+CodeClimate::TestReporter.start
+
+
+def spec_root_path(*args)
+  File.join(File.dirname(__FILE__), *args)
+end
+
+def data_path(*args)
+  spec_root_path('data', *args)
+end
+
+def output_path(*args)
+  spec_root_path('output', *args)
+end
