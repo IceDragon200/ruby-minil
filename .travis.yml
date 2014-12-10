@@ -1,0 +1,12 @@
+language: ruby
+install:
+  - gem install bundler
+  - bundle
+  - bundle exec rake compile
+rvm:
+  - 2.2
+  - 2.1
+  - 2.0.0
+  - 1.9.3
+script:
+  - CODECLIMATE_REPO_TOKEN=f5101c656b72b052e4d809276320e6aa79f94ce713e676a7b7d9dba41891cc8d bundle exec rake spec
