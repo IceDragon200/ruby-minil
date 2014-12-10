@@ -6,7 +6,7 @@ module Minil
       @value = value
     end
 
-    private def clamp_channel_value(value)
+    def clamp_channel_value(value)
       value < 0 ? 0 : (value > 255 ? 255 : value)
     end
 
@@ -94,5 +94,7 @@ module Minil
     def self.rgb(r, g, b)
       rgba(r, g, b, 255)
     end
+
+    private :clamp_channel_value
   end
 end

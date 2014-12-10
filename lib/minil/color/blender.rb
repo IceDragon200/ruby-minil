@@ -156,7 +156,7 @@ module Minil
       symbol
     end
 
-    private def singularize(*args)
+    def singularize(*args)
       if args.size <= 1
         return args.first
       else
@@ -164,7 +164,7 @@ module Minil
       end
     end
 
-    private def new_color(r, g, b, a)
+    def new_color(r, g, b, a)
       NormalizedColor.new(r, g, b, a)
     end
 
@@ -180,23 +180,23 @@ module Minil
       ((dst) - (dst) + ((src) - (dst)) * (a))
     end
 
-    ncolor def min(*colors)
+    def min(*colors)
       colors.min_by(&:sum)
     end
 
-    ncolor def max(*colors)
+    def max(*colors)
       colors.max_by(&:sum)
     end
 
-    ncolor def darkest(*colors)
+    def darkest(*colors)
       colors.min_by(&:lum)
     end
 
-    ncolor def lightest(*colors)
+    def lightest(*colors)
       colors.max_by(&:lum)
     end
 
-    sncolor def invert(color)
+    def invert(color)
       new_color(1 - color.r, 1 - color.g, 1 - color.b, color.a).clamped
     end
 
@@ -214,44 +214,44 @@ module Minil
     end
 
     # blending
-    ncolor def blend_alpha(col1, col2)
+    def blend_alpha(col1, col2)
       a = col1.a
       _blend_color(col1, col2) do |n, n2|
         (n - n + (n2 - n) * a)
       end
     end
 
-    ncolor def blend_add(col1, col2)
+    def blend_add(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         [n + n2, 1.0].min
       end
     end
 
-    ncolor def blend_subtract(col1, col2)
+    def blend_subtract(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         [n - n2, 0.0].max
       end
     end
 
-    ncolor def blend_screen(col1, col2)
+    def blend_screen(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         1.0 - (1.0 - n) * (1.0 - n2)
       end
     end
 
-    ncolor def blend_multiply(col1, col2)
+    def blend_multiply(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         (n * n2)
       end
     end
 
-    ncolor def blend_divide(col1, col2)
+    def blend_divide(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         n2 != 0 ? n / n2 : 1.0
       end
     end
 
-    ncolor def blend_overlay(col1, col2)
+    def blend_overlay(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         if n < 0.5
           2 * (n * n2)
@@ -261,7 +261,7 @@ module Minil
       end
     end
 
-    ncolor def blend_softlight(col1, col2)
+    def blend_softlight(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         if n2 < 0.5
           2 * n * n2 + n ** 2 * (1 - 2 * n2)
@@ -271,19 +271,19 @@ module Minil
       end
     end
 
-    ncolor def blend_dodge(col1, col2)
+    def blend_dodge(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         (n >= 1.0) ? n : [1.0, ((n2 / (1.0 - n)))].min
       end
     end
 
-    ncolor def blend_burn(col1, col2)
+    def blend_burn(col1, col2)
       _blend_color(col1, col2) do |n, n2|
         (n <= 0.0) ? n : [0, (1.0 - ((1.0 - n2)) / n)].max
       end
     end
 
-    ncolor def blend_alpha2(col1, col2)
+    def blend_alpha2(col1, col2)
       a = 1.0
       beta = a * col1.a
       result = new_color(col2.r, col2.g, col2.b, col2.a)
@@ -322,6 +322,26 @@ module Minil
       col = snormalize(col1)
       blend_subtract(col, col * rate)
     end
+
+    ncolor :min
+    ncolor :max
+    ncolor :darkest
+    ncolor :lightest
+    ncolor :invert
+    ncolor :blend_alpha
+    ncolor :blend_add
+    ncolor :blend_subtract
+    ncolor :blend_screen
+    ncolor :blend_multiply
+    ncolor :blend_divide
+    ncolor :blend_overlay
+    ncolor :blend_softlight
+    ncolor :blend_dodge
+    ncolor :blend_burn
+    ncolor :blend_alpha2
+
+    private :singularize
+    private :new_color
 
     extend self
   end
