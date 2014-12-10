@@ -2,7 +2,7 @@
 # minil.gemspec
 #
 lib = File.expand_path('../lib/', __FILE__)
-$:.unshift lib unless $:.include?(lib)
+$LOAD_PATH.unshift lib unless $LOAD_PATH.include?(lib)
 
 require 'minil/version'
 
@@ -16,11 +16,13 @@ Gem::Specification.new do |s|
   s.date        = Time.now.to_date.to_s
   s.license     = 'MIT'
   s.authors     = ['Corey Powell']
+  s.email       = 'mistdragon100@gmail.com'
 
   s.require_path = 'lib'
-  s.files = ["README.md", "CHANGELOG.md"] +
-            Dir.glob('lib/**/*') +
-            Dir.glob('spec/**/*') +
-            Dir.glob('ext/**/*') +
-            Dir.glob('test/**/*')
+  s.extensions = Dir.glob('ext/**/extconf.rb')
+  s.files = ['README.md'] +
+            Dir.glob('lib/**/*.rb') +
+            Dir.glob('spec/**/*.rb') +
+            Dir.glob('ext/**/*.{c,h,rb}') +
+            Dir.glob('test/**/*.rb')
 end
