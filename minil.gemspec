@@ -18,6 +18,11 @@ Gem::Specification.new do |s|
   s.authors     = ['Corey Powell']
   s.email       = 'mistdragon100@gmail.com'
 
+  s.add_dependency 'codeclimate-test-reporter', '~> 0.4'
+  s.add_dependency 'rake', '~> 10.4'
+  s.add_dependency 'rspec', '~> 3.1'
+  s.add_development_dependency 'rake-compiler', '~> 0.9'
+
   s.require_path = 'lib'
   s.extensions = Dir.glob('ext/**/extconf.rb')
   s.files = ['README.md'] +
