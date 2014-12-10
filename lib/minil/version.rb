@@ -1,11 +1,7 @@
 module Minil #:nodoc:
   module Version #:nodoc:
-    MAJOR = 0
-    MINOR = 2
-    PATCH = 0
-    BUILD = nil
-    STRING = [[MAJOR, MINOR, PATCH].compact.join("."), BUILD].compact.join("-").freeze
+    MAJOR, MINOR, TEENY, PATCH = 0, 12, 0, nil
+    STRING = [MAJOR, MINOR, TEENY, PATCH].compact.join('.')
   end
-  # backward compatibility
   VERSION = Version::STRING
 end
