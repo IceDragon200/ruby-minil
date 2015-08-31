@@ -1,4 +1,4 @@
-require 'minil/functions'
+require 'minil/image'
 require 'minil/rect'
 
 module Minil

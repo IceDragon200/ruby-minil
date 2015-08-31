@@ -140,9 +140,9 @@ class Bitmap
     @__image__ = begin
       case args.size
       when 1
-        Image.load_file(args.first)
+        Minil::Image.load_file(args.first)
       when 2
-        Image.create(*args)
+        Minil::Image.create(*args)
       else
         raise ArgumentError, "got #{args.size} (expected 1 or 2)"
       end

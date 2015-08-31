@@ -649,7 +649,9 @@ Image_inspect(VALUE self)
 
 void Init_minil_ext(void)
 {
-  rb_cImage = rb_define_class("Image", rb_cObject);
+  VALUE rb_mMinil = rb_define_module("Minil");
+  rb_cImage = rb_define_class_under(rb_mMinil, "Image", rb_cObject);
+
   rb_define_alloc_func(rb_cImage, Image_m_alloc);
   rb_define_private_method(rb_cImage, "initialize_copy", Image_initialize_copy, 1);
   rb_define_method(rb_cImage, "create",    Image_create,    2);

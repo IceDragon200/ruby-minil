@@ -1,4 +1,3 @@
-require 'minil_ext'
-require 'minil/functions'
+require 'minil/image'
 require 'minil/color'
 require 'minil/rect'
