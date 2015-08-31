@@ -10,7 +10,46 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
+struct mil_Color {
+  union {
+    uint8_t a, r, g, b;
+    uint32_t value;
+  };
+};
+
 static VALUE rb_cImage = Qundef;
+
+static struct mil_Color
+mil_Color_from_ruby(VALUE rb_color)
+{
+  struct mil_Color color;
+  color.value = 0;
+  switch(TYPE(rb_color)) {
+    case RUBY_T_ARRAY: {
+      const long len = RARRAY_LEN(rb_color);
+      if (len >= 3 && 4 >= len) {
+      } else if (len == 4) {
+        color.a = 0xFF;
+        if (len == 4) {
+          color.a = (uint8_t)rb_ary_entry(rb_color, 3);
+        }
+        color.r = (uint8_t)rb_ary_entry(rb_color, 0);
+        color.g = (uint8_t)rb_ary_entry(rb_color, 1);
+        color.b = (uint8_t)rb_ary_entry(rb_color, 2);
+      } else {
+        rb_raise(rb_eArgError, "Expected an Array of size 3 or 4");
+      }
+    } break;
+    case RUBY_T_FIXNUM:
+    case RUBY_T_BIGNUM: {
+      color.value = NUM2ULONG(rb_color);
+    } break;
+    default: {
+      rb_raise(rb_eTypeError, "Expected Array, Bignum or Fixnum");
+    } break;
+  }
+  return color;
+}
 
 static mil_Image_t*
 mil_Image_new()
@@ -322,7 +361,7 @@ Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)
   x = NUM2INT(rb_v_x);
   y = NUM2INT(rb_v_y);
 
-  src_pixel = (uint32_t)NUM2LONG(rb_v_pixel);
+  src_pixel = mil_Color_from_ruby(rb_v_pixel).value;
 
   mil_Image_set_pixel(image, x, y, src_pixel);
   return self;
@@ -353,7 +392,7 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
   w = NUM2INT(rb_v_w);
   h = NUM2INT(rb_v_h);
 
-  color = (uint32_t)NUM2LONG(rb_v_color);
+  color = mil_Color_from_ruby(rb_v_color).value;
   a = color >> 24 & 0xFF;
   r = color >> 16 & 0xFF;
   g = color >> 8  & 0xFF;
