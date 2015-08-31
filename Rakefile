@@ -8,3 +8,5 @@ end
 
 RSpec::Core::RakeTask.new(:spec)
 Rake::ExtensionTask.new('minil_ext')
+
+task default: :compile
