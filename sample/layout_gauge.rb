@@ -1,9 +1,7 @@
 $:.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
-require 'minil/layout/gauges'
-require 'minil/color'
-require "fileutils"
+require_relative 'common'
 
-@img = Image.create(128, 16)
+img = Minil::Image.create(128, 16)
 vertical = true
 
 options = {
@@ -15,6 +13,7 @@ options = {
 10.times do |i|
   Minil::LayoutWrapper.new do |a|
     a.send("gauge#{i}", vertical)
-  end.call(@img, @img.rect, options)
-  @img.save_file("g#{i}.png")
+  end.call(img, img.rect, options)
+
+  save_image(img, "g#{i}.png")
 end

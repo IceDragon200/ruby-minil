@@ -1,8 +1,7 @@
-$:.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
-require 'minil/functions'
+require_relative 'common'
 
-src = Image.create(512, 512)
-src_rb = Image.create(512, 512)
+src = Minil::Image.create(512, 512)
+src_rb = Minil::Image.create(512, 512)
 
 src.fill(0xFF000000)
 src_rb.fill(0xFF000000)
@@ -13,5 +12,5 @@ src_rb.fill(0xFF000000)
   src_rb.rb_fill_rect(i * 32, i * 32, 32, 32, c)
 end
 
-src.save_file("test_img_fill_rect.png")
-src_rb.save_file("test_img_fill_rect_rb.png")
+save_image(src, "test_img_fill_rect.png")
+save_image(src_rb, "test_img_fill_rect_rb.png")

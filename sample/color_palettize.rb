@@ -1,5 +1,5 @@
-$:.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
-require 'minil/functions'
+require_relative 'common'
+require 'minil/image'
 require 'minil/color/palettize'
 
 size = [32, 32]
@@ -19,7 +19,7 @@ color2 = Minil::Color.new(0xFFC63842)
 
 cw, ch = *size
 
-img = Image.create(cw * 4, ch * meths.size)
+img = Minil::Image.create(cw * 4, ch * meths.size)
 
 meths.each_with_index do |meth, i|
   colors = Minil::ColorPalettize.send(meth, color1)
@@ -28,11 +28,11 @@ meths.each_with_index do |meth, i|
   end
 end
 
-img.save_file("color_palettize_test.png")
+save_image(img, "color_palettize_test.png")
 
 
 [:rated, :circ, :sq, :cubic].each do |meth|
-  img = Image.create(cw * 4, ch * rates.size)
+  img = Minil::Image.create(cw * 4, ch * rates.size)
 
   rates.each_with_index do |rate, i|
     colors = Minil::ColorPalettize.send(meth, color1, rate)
@@ -41,5 +41,5 @@ img.save_file("color_palettize_test.png")
     end
   end
 
-  img.save_file("color_palettize_test_#{meth}.png")
+  save_image(img, "color_palettize_test_#{meth}.png")
 end

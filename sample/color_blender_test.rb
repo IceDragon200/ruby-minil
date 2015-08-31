@@ -1,6 +1,4 @@
-$:.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
-require 'minil/functions'
-require 'minil/color/blender'
+require_relative 'common'
 
 size = [32, 32]
 
@@ -35,7 +33,7 @@ color1 = Minil::Color.new(0xFFA48799)
 color2 = Minil::Color.new(0xFFC63842)
 
 cw, ch = *size
-img = Image.create(cw * 3, ch * blends.size)
+img = Minil::Image.create(cw * 3, ch * blends.size)
 
 blends.each_with_index do |blend_mode, i|
   color = Minil::ColorBlender.send(blend_mode, color1, color2)
@@ -45,9 +43,9 @@ blends.each_with_index do |blend_mode, i|
   img.fill_rect(cw*2, ch * i, cw, ch, color2.value)
 end
 
-img.save_file("color_blend_test.png")
+save_image(img, "color_blend_test.png")
 
-img = Image.create(cw * rates.size, ch * rate_blends.size)
+img = Minil::Image.create(cw * rates.size, ch * rate_blends.size)
 
 rate_blends.each_with_index do |blend_mode, i|
   rates.each_with_index do |rate, j|
@@ -56,4 +54,4 @@ rate_blends.each_with_index do |blend_mode, i|
   end
 end
 
-img.save_file("color_blend_test2.png")
+save_image(img, "color_blend_test2.png")

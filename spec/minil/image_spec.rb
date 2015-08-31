@@ -1,13 +1,17 @@
 require_relative 'spec_helper'
 
-describe Image do
+describe Minil::Image do
   context '#create' do
     it 'should initialize an Image given a width and height' do
-      Image.new.create(128, 64)
+      described_class.new.create(128, 64)
     end
   end
 
-  let(:imag) { i=Image.new; i.create(128, 128); i }
+  let(:imag) do
+    img = described_class.new
+    img.create(128, 128)
+    img
+  end
 
   context '#get_pixel' do
     it 'should get a pixel' do
@@ -67,7 +71,7 @@ describe Image do
   context '#alpha_blit_fill' do
   end
 
-  context '#alpha_blit_fill_rr' do
+  context '#alpha_blit_fill_r' do
   end
 
   context '#subimage' do
@@ -198,7 +202,7 @@ describe Image do
 
   context '#load_file' do
     it 'should load an image file' do
-      img = Image.new
+      img = described_class.new
       img.load_file(data_path('test_img.png'))
       img
     end

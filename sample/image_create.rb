@@ -1,10 +1,6 @@
-$:.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
-require 'minil/functions'
-require "fileutils"
+require_relative 'common'
 
-FileUtils.rm_rf(Dir.glob("test_img*.{png,bmp,tga}"))
-
-image = Image.new
+image = Minil::Image.new
 p image
 w, h = 128, 128
 p image.create(w, h)
@@ -23,12 +19,12 @@ uimage = image.upscale(2, 2)
 dimage = image.downscale(2, 2)
 #p "%x" % image[0, 0]
 #p image.blob
-image.save_file("test_img.bmp")
-image.save_file("test_img.png")
-image.save_file("test_img.tga")
-uimage.save_file("test_img_u2x.bmp")
-uimage.save_file("test_img_u2x.png")
-uimage.save_file("test_img_u2x.tga")
-dimage.save_file("test_img_d2x.bmp")
-dimage.save_file("test_img_d2x.png")
-dimage.save_file("test_img_d2x.tga")
+save_image(image, "test_img.bmp")
+save_image(image, "test_img.png")
+save_image(image, "test_img.tga")
+save_image(uimage, "test_img_u2x.bmp")
+save_image(uimage, "test_img_u2x.png")
+save_image(uimage, "test_img_u2x.tga")
+save_image(dimage, "test_img_d2x.bmp")
+save_image(dimage, "test_img_d2x.png")
+save_image(dimage, "test_img_d2x.tga")
