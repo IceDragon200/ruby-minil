@@ -95,16 +95,16 @@ module Minil
       self.y = cy - height / 2
     end
 
-    def inside_xy?(ix, iy)
+    def contains_xy?(ix, iy)
       ix.between?(x, x2 - 1) && iy.between?(y, y2 - 1)
     end
 
-    def inside_vect?(vect)
-      inside_xy?(vect.x, vect.y)
+    def contains_vect?(vect)
+      contains_xy?(vect.x, vect.y)
     end
 
-    def inside?(*args)
-      args.size == 2 ? inside_xy?(*args) : inside_vect?(args.first)
+    def contains?(*args)
+      args.size == 2 ? contains_xy?(*args) : contains_vect?(args.first)
     end
 
     def clear
