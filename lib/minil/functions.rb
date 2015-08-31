@@ -360,22 +360,23 @@ class Image
     height.times do |y|
       width.times do |x|
         value = get_pixel(x, y)
+        a = (value & 0xFF000000) >> 24
         case channel_name
         when "rgb"
           value = (value & 0x00FFFFFF)
-          value = (255 << 24) | value
+          value = (a << 24) | value
         when "r"
           value = (value & 0x00FF0000) >> 16
-          value = (255 << 24) | (value << 16) | (value << 8) | (value)
+          value = (a << 24) | (value << 16) | (value << 8) | (value)
         when "g"
           value = (value & 0x0000FF00) >> 8
-          value = (255 << 24) | (value << 16) | (value << 8) | (value)
+          value = (a << 24) | (value << 16) | (value << 8) | (value)
         when "b"
           value = (value & 0x000000FF)
-          value = (255 << 24) | (value << 16) | (value << 8) | (value)
+          value = (a << 24) | (value << 16) | (value << 8) | (value)
         when "a"
           value = (value & 0xFF000000) >> 24
-          value = (255 << 24) | (value << 16) | (value << 8) | (value)
+          value = (a << 24) | (value << 16) | (value << 8) | (value)
         end
         set_pixel(x, y, value)
       end
