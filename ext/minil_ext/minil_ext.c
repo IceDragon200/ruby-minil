@@ -75,11 +75,13 @@ mil_Image_free(mil_Image_t *image)
   free(image);
 }
 
+#define point_in_image(image, x, y) (x >= 0 && x < image->width && y >=0 && y < image->height)
+
 static uint32_t
 mil_Image_get_pixel(mil_Image_t *image, int32_t x, int32_t y)
 {
   uint32_t dest_pixel = 0x00000000;
-  if (x < image->width && y < image->height) {
+  if (point_in_image(image, x, y)) {
     uint8_t *src_pixel = &image->data[(x + y * image->width) * 4];
     dest_pixel  = *src_pixel++ << 16;
     dest_pixel |= *src_pixel++ << 8;
@@ -92,7 +94,7 @@ mil_Image_get_pixel(mil_Image_t *image, int32_t x, int32_t y)
 static void
 mil_Image_set_pixel(mil_Image_t *image, int32_t x, int32_t y, uint32_t src_pixel)
 {
-  if (x < image->width && y < image->height) {
+  if (point_in_image(image, x, y)) {
     uint8_t *dest_pixel    = &image->data[(x + y * image->width) * 4];
     *dest_pixel++ = src_pixel >> 16 & 0xFF;
     *dest_pixel++ = src_pixel >> 8  & 0xFF;
