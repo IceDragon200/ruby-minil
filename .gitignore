@@ -26,3 +26,6 @@ ext/mkmf.log
 
 # Platform specific
 lib/*.so
+test/*.png
+test/*.bmp
+test/*.tga
