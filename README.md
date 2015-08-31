@@ -17,9 +17,9 @@ underneath.
 
 Usage:
 ```ruby
-require 'minil'
+require 'minil/image'
 
-img = Image.load_file('my_image.png')
+img = Minil::Image.load_file('my_image.png')
 img.get_pixel(0, 0)
 img.set_pixel(0, 0, 0xFFFFFFFF)
 ```
