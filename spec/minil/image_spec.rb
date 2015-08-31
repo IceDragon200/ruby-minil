@@ -1,4 +1,4 @@
-require_relative 'spec_helper'
+require 'minil/spec_helper'
 
 describe Minil::Image do
   context '#create' do

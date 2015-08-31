@@ -1,4 +1,4 @@
-require_relative 'spec_helper'
+require 'minil/spec_helper'
 
 @test_colors = [
   Minil::Color.rgba(255, 255, 255, 255),
