@@ -275,7 +275,7 @@ class Bitmap
     when 5
       x, y, w, h, color = *args
     else
-      raise(ArgumentError, "got #{args.size} (expected 2, or 5)")
+      raise ArgumentError, "got #{args.size} (expected 2, or 5)"
     end
     @__image__.fill_rect(x, y, w, h, color.__color__)
     self
@@ -300,7 +300,7 @@ class Bitmap
     when 7
       x, y, w, h, color1, color2, vertical = *args
     else
-      raise(ArgumentError, "expected 3, 4, 6 or 7 but recieved #{args.size}")
+      raise ArgumentError, "expected 3, 4, 6 or 7 but recieved #{args.size}"
     end
     @__image__.gradient_fill_rect(x, y, w, h, color1, color2, vertical)
     self
