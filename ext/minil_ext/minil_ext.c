@@ -368,10 +368,26 @@ Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)
 }
 
 static bool
+adjust_invert_rect(int *x, int *y, int *w, int *h)
+{
+  if (*w < 0) {
+    *x += *w;
+    *w = -(*w);
+  }
+
+  if (*h < 0) {
+    *y += *h;
+    *h = -(*h);
+  }
+}
+
+static bool
 adjust_rect_to_fit_texture(mil_Image_t *image, int *x, int *y, int *w, int *h)
 {
   if (image->width < *x || image->height < *y) return false;
-  if (*w <= 0 || *h <= 0) return false;
+  if (*w == 0 || *h == 0) return false;
+  adjust_invert_rect(x, y, w, h);
+  //if (*w <= 0 || *h <= 0) return false;
 
   if (*x < 0) {
     *w += *x;
@@ -394,28 +410,10 @@ static bool
 adjust_rect_to_fit_texture_blit(mil_Image_t *src_image, mil_Image_t *dest_image,
   int *x, int *y, int *sx, int *sy, int *sw, int *sh)
 {
-  if (dest_image->width < *x || dest_image->height < *y) {
-    return false;
-  }
-
-  if (*x < 0) {
-    *sw += *x;
-    *x = 0;
-  }
-
-  if (*y < 0) {
-    *sh += *y;
-    *y = 0;
-  }
-
   if (!adjust_rect_to_fit_texture(src_image, sx, sy, sw, sh)) {
     return false;
   }
-
-  if (dest_image->width < (*x + *sw)) *sw -= (*x + *sw) - dest_image->width;
-  if (dest_image->height < (*y + *sh)) *sh -= (*y + *sh) - dest_image->height;
-
-  if (*sw <= 0 || *sh <= 0) {
+  if (!adjust_rect_to_fit_texture(dest_image, x, y, sw, sh)) {
     return false;
   }
   return true;
