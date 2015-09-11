@@ -385,7 +385,7 @@ adjust_rect_to_fit_texture(mil_Image_t *image, int *x, int *y, int *w, int *h)
   if ((*x + *w) > image->width) *w -= (*x + *w) - image->width;
   if ((*y + *h) > image->height) *h -= (*y + *h) - image->height;
 
-  if (w <= 0 || h <= 0) return false;
+  if (*w <= 0 || *h <= 0) return false;
 
   return true;
 }
