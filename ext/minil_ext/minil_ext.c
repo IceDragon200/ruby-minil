@@ -367,6 +367,60 @@ Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)
   return self;
 }
 
+static bool
+adjust_rect_to_fit_texture(mil_Image_t *image, int *x, int *y, int *w, int *h)
+{
+  if (image->width < *x || image->height < *y) return false;
+  if (*w <= 0 || *h <= 0) return false;
+
+  if (*x < 0) {
+    *w += *x;
+    *x = 0;
+  }
+  if (*y < 0) {
+    *h += *y;
+    *y = 0;
+  }
+
+  if ((*x + *w) > image->width) *w -= (*x + *w) - image->width;
+  if ((*y + *h) > image->height) *h -= (*y + *h) - image->height;
+
+  if (w <= 0 || h <= 0) return false;
+
+  return true;
+}
+
+static bool
+adjust_rect_to_fit_texture_blit(mil_Image_t *src_image, mil_Image_t *dest_image,
+  int *x, int *y, int *sx, int *sy, int *sw, int *sh)
+{
+  if (dest_image->width < *x || dest_image->height < *y) {
+    return false;
+  }
+
+  if (*x < 0) {
+    *sw += *x;
+    *x = 0;
+  }
+
+  if (*y < 0) {
+    *sh += *y;
+    *y = 0;
+  }
+
+  if (!adjust_rect_to_fit_texture(src_image, sx, sy, sw, sh)) {
+    return false;
+  }
+
+  if (dest_image->width < (*x + *sw)) *sw -= (*x + *sw) - dest_image->width;
+  if (dest_image->height < (*y + *sh)) *sh -= (*y + *sh) - dest_image->height;
+
+  if (*sw <= 0 || *sh <= 0) {
+    return false;
+  }
+  return true;
+}
+
 static VALUE
 Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
                                VALUE rb_v_w, VALUE rb_v_h,
@@ -379,11 +433,11 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
   uint8_t g;
   uint8_t b;
   uint8_t a;
-  int32_t x;
-  int32_t y;
-  int32_t w;
-  int32_t h;
-  int32_t padding;
+  int x;
+  int y;
+  int w;
+  int h;
+  int64_t padding;
 
   mil_Image_t *image;
   Data_Get_Struct(self, mil_Image_t, image);
@@ -392,30 +446,15 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
   w = NUM2INT(rb_v_w);
   h = NUM2INT(rb_v_h);
 
+  if (!adjust_rect_to_fit_texture(image, &x, &y, &w, &h)) {
+    return self;
+  }
+
   color = mil_Color_from_ruby(rb_v_color).value;
   a = color >> 24 & 0xFF;
   r = color >> 16 & 0xFF;
   g = color >> 8  & 0xFF;
   b = color >> 0  & 0xFF;
-
-  if (x > image->width || y > image->height) {
-    return self;
-  }
-
-  if (x < 0) {
-    w += x;
-    x = 0;
-  }
-  if (y < 0) {
-    h += y;
-    y = 0;
-  }
-  if ((x + w) > image->width) {
-    w -= (x + w) - image->width;
-  }
-  if ((y + h) > image->height) {
-    h -= (y + h) - image->height;
-  }
 
   pixels = &image->data[(x + y * image->width) * 4];
 
@@ -476,33 +515,7 @@ Image_blit(VALUE self, VALUE rb_v_img, VALUE rb_v_x, VALUE rb_v_y,
   sw = NUM2INT(rb_v_sw);
   sh = NUM2INT(rb_v_sh);
 
-  if (x > dest_image->width || y > dest_image->height) {
-    return self;
-  }
-
-  if (sx < 0) {
-    sw += sx;
-    sx = 0;
-  }
-  if (sy < 0) {
-    sh += sy;
-    sy = 0;
-  }
-  if ((sx + sw) > src_image->width) {
-    sw -= (sx + sw) - src_image->width;
-  }
-  if ((sy + sh) > src_image->height) {
-    sh -= (sy + sh) - src_image->height;
-  }
-
-  if ((x + sw) > dest_image->width) {
-    sw -= (x + sw) - dest_image->width;
-  }
-  if ((y + sh) > dest_image->height) {
-    sh -= (y + sh) - dest_image->height;
-  }
-
-  if (sw <= 0 || sh <= 0) {
+  if (!adjust_rect_to_fit_texture_blit(src_image, dest_image, &x, &y, &sx, &sy, &sw, &sh)) {
     return self;
   }
 
@@ -570,33 +583,7 @@ Image_alpha_blit(VALUE self, VALUE rb_v_img, VALUE rb_v_x, VALUE rb_v_y,
 
   alpha = mil_int_min(255, mil_int_max(alpha, 0));
 
-  if (x > dest_image->width || y > dest_image->height) {
-    return self;
-  }
-
-  if (sx < 0) {
-    sw += sx;
-    sx = 0;
-  }
-  if (sy < 0) {
-    sh += sy;
-    sy = 0;
-  }
-  if ((sx + sw) > src_image->width) {
-    sw -= (sx + sw) - src_image->width;
-  }
-  if ((sy + sh) > src_image->height) {
-    sh -= (sy + sh) - src_image->height;
-  }
-
-  if ((x + sw) > dest_image->width) {
-    sw -= (x + sw) - dest_image->width;
-  }
-  if ((y + sh) > dest_image->height) {
-    sh -= (y + sh) - dest_image->height;
-  }
-
-  if (sw <= 0 || sh <= 0) {
+  if (!adjust_rect_to_fit_texture_blit(src_image, dest_image, &x, &y, &sx, &sy, &sw, &sh)) {
     return self;
   }
 
