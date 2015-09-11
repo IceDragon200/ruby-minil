@@ -305,6 +305,16 @@ module Minil
       img
     end
 
+    def scale(xs, ys = xs)
+      if xs < 1 && ys < 1
+        downscale((xs / 1.0).to_i, (ys / 1.0).to_i)
+      elsif xs >= 1 && ys >= 1
+        upscale(xs, ys)
+      else
+        raise ArgumentError, "Mismatch scales, you cannot downscale and upscale at the same time."
+      end
+    end
+
     def channel_select(channel_name)
       channel_name = channel_name.to_s
       height.times do |y|
