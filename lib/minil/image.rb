@@ -2,6 +2,45 @@ require 'minil_ext'
 
 module Minil
   class Image
+    # @param [Integer] x
+    # @param [Integer] y
+    # @param [Integer] w
+    # @param [Integer] h
+    # @return [Array<Integer>]
+    def fit_rect(x, y, w, h)
+      #if w < 0 || h < 0
+      #  return x, y, 0, 0
+      #end
+
+      if w < 0
+        x += w
+        w = -w
+      end
+
+      if h < 0
+        y += h
+        h = -h
+      end
+
+      if x < 0
+        w += x
+        x = 0
+      end
+
+      if y < 0
+        h += y
+        y = 0
+      end
+
+      x2 = x + w
+      y2 = y + h
+
+      w -= x2 - width if x2 >= width
+      h -= y2 - height if y2 >= height
+
+      return x, y, w, h
+    end
+
     def rect
       Minil::Rect.new(0, 0, width, height)
     end
@@ -143,7 +182,44 @@ module Minil
       subimage(*rect)
     end
 
-    def mirror(vertical=false)
+    # Blits the (img) to this image, but filters pixels by a mask (red channel)
+    #
+    # @param [Minil::Image] img
+    # @param [Minil::Image] mask
+    # @param [Integer] x
+    # @param [Integer] y
+    # @param [Integer] sx
+    # @param [Integer] sy
+    # @param [Integer] sw
+    # @param [Integer] sh
+    # @return [self]
+    def mask_blit(img, mask, x, y, sx, sy, sw, sh)
+      if img.width != mask.width || img.height != mask.width
+        raise ArgumentError, "Mask must be the same size as provided image"
+      end
+
+      sx, sy, sw, sh = img.fit_rect(sx, sy, sw, sh)
+      x, y, sw, sh = fit_rect(x, y, sw, sh)
+
+      sh.times do |row|
+        sw.times do |col|
+          px, py = sx + col, sy + row
+          mask_pixel = mask.get_pixel(px, py)
+          pixel = img.get_pixel(px, py)
+
+          mask_alpha = (mask_pixel >> 16) & 0xFF
+          alpha = (pixel >> 24) & 0xFF
+
+          new_alpha = (alpha * mask_alpha / 255)
+          new_pixel = (pixel & 0x00FFFFFF) | (new_alpha << 24)
+          set_pixel x + col, y + row, new_pixel
+        end
+      end
+
+      self
+    end
+
+    def mirror(vertical = false)
       dest = self.class.create(width, height)
 
       if vertical
