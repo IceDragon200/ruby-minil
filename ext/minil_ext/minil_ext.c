@@ -27,8 +27,7 @@ mil_Color_from_ruby(VALUE rb_color)
   switch(TYPE(rb_color)) {
     case RUBY_T_ARRAY: {
       const long len = RARRAY_LEN(rb_color);
-      if (len >= 3 && 4 >= len) {
-      } else if (len == 4) {
+      if (len >= 3 && len <= 4) {
         color.a = 0xFF;
         if (len == 4) {
           color.a = (uint8_t)rb_ary_entry(rb_color, 3);
@@ -425,12 +424,8 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
                                VALUE rb_v_color)
 {
   Image_m_check_image(self);
-  uint32_t color;
+  struct mil_Color color;
   uint8_t *pixels;
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-  uint8_t a;
   int x;
   int y;
   int w;
@@ -448,11 +443,7 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
     return self;
   }
 
-  color = mil_Color_from_ruby(rb_v_color).value;
-  a = color >> 24 & 0xFF;
-  r = color >> 16 & 0xFF;
-  g = color >> 8  & 0xFF;
-  b = color >> 0  & 0xFF;
+  color = mil_Color_from_ruby(rb_v_color);
 
   pixels = &image->data[(x + y * image->width) * 4];
 
@@ -460,10 +451,10 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
 
   for (int i = 0; i < h; ++i, pixels += padding) {
     for (int j = 0; j < w; ++j) {
-      *pixels++ = r;
-      *pixels++ = g;
-      *pixels++ = b;
-      *pixels++ = a;
+      *pixels++ = color.r;
+      *pixels++ = color.g;
+      *pixels++ = color.b;
+      *pixels++ = color.a;
     }
   }
 
