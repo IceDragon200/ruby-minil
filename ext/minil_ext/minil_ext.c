@@ -12,7 +12,9 @@
 
 struct mil_Color {
   union {
-    uint8_t a, r, g, b;
+    struct {
+      uint8_t a, r, g, b;
+    };
     uint32_t value;
   };
 };
@@ -30,18 +32,18 @@ mil_Color_from_ruby(VALUE rb_color)
       if (len >= 3 && len <= 4) {
         color.a = 0xFF;
         if (len == 4) {
-          color.a = (uint8_t)rb_ary_entry(rb_color, 3);
+          color.a = NUM2INT(rb_ary_entry(rb_color, 3)) & 0xFF;
         }
-        color.r = (uint8_t)rb_ary_entry(rb_color, 0);
-        color.g = (uint8_t)rb_ary_entry(rb_color, 1);
-        color.b = (uint8_t)rb_ary_entry(rb_color, 2);
+        color.r = NUM2INT(rb_ary_entry(rb_color, 0)) & 0xFF;
+        color.g = NUM2INT(rb_ary_entry(rb_color, 1)) & 0xFF;
+        color.b = NUM2INT(rb_ary_entry(rb_color, 2)) & 0xFF;
       } else {
         rb_raise(rb_eArgError, "Expected an Array of size 3 or 4");
       }
     } break;
     case RUBY_T_FIXNUM:
     case RUBY_T_BIGNUM: {
-      color.value = NUM2ULONG(rb_color);
+      color.value = NUM2ULONG(rb_color) & 0xFFFFFFFF;
     } break;
     default: {
       rb_raise(rb_eTypeError, "Expected Array, Bignum or Fixnum");
@@ -328,8 +330,7 @@ static VALUE
 Image_get_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y)
 {
   Image_m_check_image(self);
-  int32_t x;
-  int32_t y;
+  int x, y;
   mil_Image_t *image;
   Data_Get_Struct(self, mil_Image_t, image);
   x = NUM2INT(rb_v_x);
@@ -352,8 +353,7 @@ Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)
 {
   Image_m_check_image(self);
   uint32_t src_pixel;
-  int32_t x;
-  int32_t y;
+  int x, y;
 
   mil_Image_t *image;
   Data_Get_Struct(self, mil_Image_t, image);
@@ -378,6 +378,8 @@ adjust_invert_rect(int *x, int *y, int *w, int *h)
     *y += *h;
     *h = -(*h);
   }
+
+  return true;
 }
 
 static bool
@@ -426,10 +428,7 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
   Image_m_check_image(self);
   struct mil_Color color;
   uint8_t *pixels;
-  int x;
-  int y;
-  int w;
-  int h;
+  int x, y, w, h;
   int64_t padding;
 
   mil_Image_t *image;
