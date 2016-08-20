@@ -221,6 +221,9 @@ Image_load_file(VALUE self, VALUE rb_v_filename)
   if (file) {
     mil_Image_create_from_file(image, file);
     fclose(file);
+    if (!image->data) {
+      rb_raise(rb_eRuntimeError, "Image %s failed to load properly.", filename);
+    }
   } else {
     rb_raise(rb_path2class("Errno::ENOENT"), "%s", filename);
   }
