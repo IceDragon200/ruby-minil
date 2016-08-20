@@ -79,6 +79,10 @@ module Minil
       self.class.decode(@value)
     end
 
+    def to_s
+      "(#{r}, #{g}, #{b}, #{a})"
+    end
+
     def self.encode(r, g, b, a)
       a << 24 | r << 16 | g << 8 | b
     end
@@ -93,6 +97,17 @@ module Minil
 
     def self.rgb(r, g, b)
       rgba(r, g, b, 255)
+    end
+
+    def self.cast_to_channels(obj)
+      case obj
+      when Integer
+        decode(obj)
+      when Array
+        obj
+      else
+        raise ArgumentError, "expected an Integer or Array<Integer>"
+      end
     end
 
     private :clamp_channel_value
