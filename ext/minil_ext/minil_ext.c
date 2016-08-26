@@ -347,9 +347,7 @@ Image_get_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y)
  * @param [Integer] y
  * @param [Integer] pixel
  *   pixel format 0xAARRGGBB
- *
- * @return [Integer] pixel
- *   pixel format 0xAARRGGBB
+ * @return [self]
  */
 static VALUE
 Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)

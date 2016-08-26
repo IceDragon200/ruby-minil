@@ -41,14 +41,18 @@ module Minil
       return x, y, w, h
     end
 
+    # @return [Minil::Rect] rect representing the size of the image
     def rect
       Minil::Rect.new(0, 0, width, height)
     end
 
+    # @param [Integer, Array<Integer>[4]] color
     def fill(color)
       fill_rect(0, 0, width, height, color)
     end
 
+    # @param [Minil::Rect] rect
+    # @param [Integer, Array<Integer>[4]] color
     def fill_rect_r(rect, color)
       x, y, w, h = *rect
       fill_rect(x, y, w, h, color)
