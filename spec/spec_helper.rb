@@ -1,7 +1,3 @@
-require 'codeclimate-test-reporter'
-CodeClimate::TestReporter.start
-
-
 def spec_root_path(*args)
   File.join(File.dirname(__FILE__), *args)
 end

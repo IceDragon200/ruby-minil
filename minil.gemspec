@@ -4,6 +4,7 @@
 lib = File.expand_path('../lib/', __FILE__)
 $LOAD_PATH.unshift lib unless $LOAD_PATH.include?(lib)
 
+require 'date'
 require 'minil/version'
 
 Gem::Specification.new do |s|
@@ -20,7 +21,6 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'rake', '~> 10.4'
   s.add_dependency 'rspec', '~> 3.1'
-  s.add_development_dependency 'codeclimate-test-reporter', '~> 0.4'
   s.add_development_dependency 'rake-compiler',             '~> 0.9'
 
   s.require_path = 'lib'

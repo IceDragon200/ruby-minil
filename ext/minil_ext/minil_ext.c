@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <assert.h>
 #include "minil_ext.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
@@ -13,7 +14,8 @@
 struct mil_Color {
   union {
     struct {
-      uint8_t a, r, g, b;
+      //uint8_t a, r, g, b;
+      uint8_t b, g, r, a;
     };
     uint32_t value;
   };
@@ -247,6 +249,7 @@ Image_save_file(VALUE self, VALUE rb_v_filename)
   char *extname;
   mil_Image_t *image;
   VALUE rb_v_extname;
+  int res = 1;
 
   Data_Get_Struct(self, mil_Image_t, image);
   width  = image->width;
@@ -258,13 +261,16 @@ Image_save_file(VALUE self, VALUE rb_v_filename)
   extname = StringValueCStr(rb_v_extname);
 
   if (!strcmp(extname, ".png")) {
-    stbi_write_png(filename, width, height, STBI_rgb_alpha, data, stride);
+    res = stbi_write_png(filename, width, height, STBI_rgb_alpha, data, stride);
   } else if (!strcmp(extname, ".bmp")) {
-    stbi_write_bmp(filename, width, height, STBI_rgb_alpha, data);
+    res = stbi_write_bmp(filename, width, height, STBI_rgb_alpha, data);
   } else if (!strcmp(extname, ".tga")) {
-    stbi_write_tga(filename, width, height, STBI_rgb_alpha, data);
+    res = stbi_write_tga(filename, width, height, STBI_rgb_alpha, data);
   } else {
     rb_raise(rb_eArgError, "unsupported image file-format %s", extname);
+  }
+  if (!res) {
+    rb_raise(rb_eArgError, "save failed %s", filename);
   }
   return self;
 }
@@ -322,7 +328,7 @@ Image_size(VALUE self)
 }
 
 /*
- * Image#set_pixel(x, y)
+ * Image#get_pixel(x, y)
  * @param [Integer] x
  * @param [Integer] y
  *
