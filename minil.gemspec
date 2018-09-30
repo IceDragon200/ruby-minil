@@ -1,11 +1,8 @@
 #
 # minil.gemspec
 #
-lib = File.expand_path('../lib/', __FILE__)
-$LOAD_PATH.unshift lib unless $LOAD_PATH.include?(lib)
-
 require 'date'
-require 'minil/version'
+require_relative 'lib/minil/version'
 
 Gem::Specification.new do |s|
   s.name        = 'minil'

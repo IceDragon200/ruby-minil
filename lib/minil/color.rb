@@ -105,6 +105,12 @@ module Minil
         decode(obj)
       when Array
         obj
+      when String
+        if obj.start_with?('#')
+          decode(str[1,-1].to_i(16) | (0xFF << 24))
+        else
+          raise ArgumentError, "malformed color string, expected #RRGGBB"
+        end
       else
         raise ArgumentError, "expected an Integer or Array<Integer>"
       end
