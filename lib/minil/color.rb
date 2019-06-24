@@ -107,7 +107,7 @@ module Minil
         obj
       when String
         if obj.start_with?('#')
-          decode(str[1,-1].to_i(16) | (0xFF << 24))
+          decode(obj[1,obj.size-1].to_i(16) | (0xFF << 24))
         else
           raise ArgumentError, "malformed color string, expected #RRGGBB"
         end

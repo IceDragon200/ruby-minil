@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.authors     = ['Corey Powell']
   s.email       = 'mistdragon100@gmail.com'
 
-  s.add_dependency 'rake', '~> 10.4'
+  s.add_dependency 'rake', '>= 11.0'
   s.add_dependency 'rspec', '~> 3.1'
   s.add_development_dependency 'rake-compiler',             '~> 0.9'
 
