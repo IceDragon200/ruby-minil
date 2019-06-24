@@ -266,6 +266,15 @@ Image_save_file(VALUE self, VALUE rb_v_filename)
     res = stbi_write_bmp(filename, width, height, STBI_rgb_alpha, data);
   } else if (!strcmp(extname, ".tga")) {
     res = stbi_write_tga(filename, width, height, STBI_rgb_alpha, data);
+  } else if (!strcmp(extname, ".hdr")) {
+    float* data_f32 = calloc(image->size, sizeof(float));
+    for (size_t i = 0; i < image->size; ++i) {
+      data_f32[i] = data[i] / 255.0;
+    }
+    res = stbi_write_hdr(filename, width, height, STBI_rgb_alpha, data_f32);
+    free(data_f32);
+  } else if (!strcmp(extname, ".jpg") || !strcmp(extname, ".jpeg")) {
+    res = stbi_write_jpg(filename, width, height, STBI_rgb_alpha, data, 100);
   } else {
     rb_raise(rb_eArgError, "unsupported image file-format %s", extname);
   }
