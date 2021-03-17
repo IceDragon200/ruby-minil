@@ -2,6 +2,41 @@ require 'minil_ext'
 
 module Minil
   class Image
+    private def lerp_pixel(c1, c2, t)
+      a1 = (c1 >> 24) & 0xFF
+      r1 = (c1 >> 16) & 0xFF
+      g1 = (c1 >>  8) & 0xFF
+      b1 = (c1 >>  0) & 0xFF
+      a2 = (c2 >> 24) & 0xFF
+      r2 = (c2 >> 16) & 0xFF
+      g2 = (c2 >>  8) & 0xFF
+      b2 = (c2 >>  0) & 0xFF
+
+      d = (t * 255).floor
+
+      a = a1 + (a2 - a1) * d / 255
+      r = r1 + (r2 - r1) * d / 255
+      g = g1 + (g2 - g1) * d / 255
+      b = b1 + (b2 - b1) * d / 255
+
+      a << 24 | r << 16 | g << 8 | b
+    end
+
+    # Args:
+    # * `other_image` [Minil::Image]
+    # * `delta` [Float]
+    def lerp(other_image, delta)
+      dest = Minil::Image.create(width, height)
+      height.times do |y|
+        width.times do |x|
+          a = get_pixel(x, y)
+          b = other_image.get_pixel(x, y)
+          dest.set_pixel(x, y, lerp_pixel(a, b, delta))
+        end
+      end
+      dest
+    end
+
     # @param [Integer] x
     # @param [Integer] y
     # @param [Integer] w
