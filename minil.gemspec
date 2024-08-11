@@ -16,13 +16,15 @@ Gem::Specification.new do |s|
   s.authors     = ['Corey Powell']
   s.email       = 'mistdragon100@gmail.com'
 
-  s.add_dependency 'rake', '>= 11.0'
-  s.add_dependency 'rspec', '~> 3.1'
-  s.add_development_dependency 'rake-compiler',             '~> 0.9'
+  s.add_development_dependency 'rake',          '>= 11.0'
+  s.add_development_dependency 'rspec',         '~> 3.10'
+  s.add_development_dependency 'rake-compiler', '~> 1.2'
 
   s.require_path = 'lib'
-  s.extensions = Dir.glob('ext/**/extconf.rb')
-  s.files = ['README.md'] +
+  s.extensions = [
+    'minil_ext/extconf.rb'
+  ]
+  s.files = ['CHANGELOG.md', 'README.md'] +
             Dir.glob('lib/**/*.rb') +
             Dir.glob('spec/**/*.rb') +
             Dir.glob('ext/**/*.{c,h,rb}') +
