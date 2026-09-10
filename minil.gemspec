@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
 
   s.require_path = 'lib'
   s.extensions = [
-    'minil_ext/extconf.rb'
+    'ext/minil_ext/extconf.rb'
   ]
   s.files = ['CHANGELOG.md', 'README.md'] +
             Dir.glob('lib/**/*.rb') +

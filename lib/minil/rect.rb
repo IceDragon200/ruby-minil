@@ -25,12 +25,21 @@ module Minil
       @h = h.to_i
     end
 
+    alias :width :w
+    alias :height :h
+    alias :width= :w=
+    alias :height= :h=
+
     def to_a
       return @x, @y, @w, @h
     end
 
     def set(x, y, w, h)
-      @x, @y, @w, @h = x, y, w, h
+      self.x = x
+      self.y = y
+      self.w = w
+      self.h = h
+      self
     end
 
     def contract(cx, cy = cx)
@@ -121,25 +130,15 @@ module Minil
     # @param [Minil::Rect] other
     # @return [Minil::Rect]
     def sub_rect(other)
-      nx = x + other.x
-      ny = y + other.y
-      nw = other.w
-      nh = other.h
-      if nx < x
-        w -= x - nx
-        nx = x
-      end
-      if ny < y
-        h -= y - ny
-        ny = y
-      end
-      if (nx + nw) > x2
-        nw = x2 - nx
-      end
-      if (ny + nh) > y2
-        nh = y2 - ny
-      end
-      Minil::Rect.new nx, ny, nw, nh
+      child_x1, child_x2 = [x + other.x, x + other.x + other.w].minmax
+      child_y1, child_y2 = [y + other.y, y + other.y + other.h].minmax
+
+      nx = [[child_x1, x].max, x2].min
+      ny = [[child_y1, y].max, y2].min
+      right = [[child_x2, x].max, x2].min
+      bottom = [[child_y2, y].max, y2].min
+
+      self.class.new nx, ny, [right - nx, 0].max, [bottom - ny, 0].max
     end
   end
 end

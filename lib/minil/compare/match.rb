@@ -21,12 +21,12 @@ module Minil
           matches += 1 if self.get_pixel(x, y) == other.get_pixel(x, y)
         end
       end
-      matches.to_f / size.to_f
+      matches.to_f / (width * height)
     end
 
     def compare_rect(other, x, y, sx, sy, w, h)
-      w.times do |iy|
-        h.times do |ix|
+      h.times do |iy|
+        w.times do |ix|
           return false unless self.get_pixel(x + ix, y + iy) == other.get_pixel(sx + ix, sy + iy)
         end
       end
@@ -35,12 +35,14 @@ module Minil
 
     def compare_rect_ratio(other, x, y, sx, sy, w, h)
       matches = 0
-      w.times do |iy|
-        h.times do |ix|
+      h.times do |iy|
+        w.times do |ix|
           matches += 1 if self.get_pixel(x + ix, y + iy) == other.get_pixel(sx + ix, sy + iy)
         end
       end
-      matches.to_f / size.to_f
+      return 0.0 if w <= 0 || h <= 0
+
+      matches.to_f / (w * h)
     end
   end
 end

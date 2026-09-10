@@ -1,4 +1,4 @@
-require 'minil/functions'
+require 'minil/image'
 require 'minil/color'
 require 'minil/rect'
 
@@ -17,7 +17,7 @@ class Color
     case args.size
     when 1
       color = args.first
-      if color === Color
+      if Color === color
         @__color__ = color.__color__.dup
       else
         raise TypeError, 'expected Color'
@@ -75,7 +75,7 @@ class Rect < Minil::Rect
     case args.size
     when 1
       obj = args.first
-      if obj === Rect
+      if Rect === obj
         super(*obj.to_a)
       else
         raise TypeError, 'expected Rect'
@@ -166,7 +166,7 @@ class Bitmap
   end
 
   def check_disposed
-    raise RGSSError, 'cannot access disposed Bitmap'
+    raise RGSSError, 'cannot access disposed Bitmap' if disposed?
   end
 
   def width
@@ -277,7 +277,7 @@ class Bitmap
     else
       raise ArgumentError, "got #{args.size} (expected 2, or 5)"
     end
-    @__image__.fill_rect(x, y, w, h, color.__color__)
+    @__image__.fill_rect(x, y, w, h, color.__color__.value)
     self
   end
 
@@ -302,7 +302,10 @@ class Bitmap
     else
       raise ArgumentError, "expected 3, 4, 6 or 7 but recieved #{args.size}"
     end
-    @__image__.gradient_fill_rect(x, y, w, h, color1, color2, vertical)
+    @__image__.gradient_fill_rect(x, y, w, h,
+                                  color1.__color__.value,
+                                  color2.__color__.value,
+                                  vertical)
     self
   end
 

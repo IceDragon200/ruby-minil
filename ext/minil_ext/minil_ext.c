@@ -1,25 +1,31 @@
 /*
  * minil - Mini Image Library
  */
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 #include <ruby.h>
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include "minil_ext.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 
 struct mil_Color {
-  union {
-    struct {
-      //uint8_t a, r, g, b;
-      uint8_t b, g, r, a;
-    };
-    uint32_t value;
-  };
+  uint32_t value;
 };
+
+typedef char mil_Color_must_be_32_bits[
+  sizeof(struct mil_Color) == sizeof(uint32_t) ? 1 : -1
+];
 
 static VALUE rb_cImage = Qundef;
 
@@ -32,13 +38,14 @@ mil_Color_from_ruby(VALUE rb_color)
     case RUBY_T_ARRAY: {
       const long len = RARRAY_LEN(rb_color);
       if (len >= 3 && len <= 4) {
-        color.a = 0xFF;
+        uint32_t a = 0xFF;
         if (len == 4) {
-          color.a = NUM2INT(rb_ary_entry(rb_color, 3)) & 0xFF;
+          a = mil_int_min(255, mil_int_max(0, NUM2INT(rb_ary_entry(rb_color, 3))));
         }
-        color.r = NUM2INT(rb_ary_entry(rb_color, 0)) & 0xFF;
-        color.g = NUM2INT(rb_ary_entry(rb_color, 1)) & 0xFF;
-        color.b = NUM2INT(rb_ary_entry(rb_color, 2)) & 0xFF;
+        uint32_t r = mil_int_min(255, mil_int_max(0, NUM2INT(rb_ary_entry(rb_color, 0))));
+        uint32_t g = mil_int_min(255, mil_int_max(0, NUM2INT(rb_ary_entry(rb_color, 1))));
+        uint32_t b = mil_int_min(255, mil_int_max(0, NUM2INT(rb_ary_entry(rb_color, 2))));
+        color.value = a << 24 | r << 16 | g << 8 | b;
       } else {
         rb_raise(rb_eArgError, "Expected an Array of size 3 or 4");
       }
@@ -58,6 +65,9 @@ static mil_Image_t*
 mil_Image_new()
 {
   mil_Image_t *image = (mil_Image_t*)malloc(sizeof(mil_Image_t));
+  if (!image) {
+    rb_memerror();
+  }
   image->width  = 0;
   image->height = 0;
   image->stride = 0;
@@ -67,35 +77,61 @@ mil_Image_new()
 }
 
 static mil_Image_t*
-mil_Image_create(mil_Image_t *image, uint32_t width, uint32_t height)
+mil_Image_create(mil_Image_t *image, int32_t width, int32_t height)
 {
-  image->width  = width;
-  image->height = height;
-  image->stride = width * 4;
-  image->size   = width * height * 4;
-  image->data   = (uint8_t*)malloc(sizeof(uint8_t) * image->size);
-  memset(image->data, 0, image->size);
-  return image;
-}
+  size_t size;
+  uint8_t *data;
 
-static mil_Image_t*
-mil_Image_create_from_memory(mil_Image_t *image,
-                             uint8_t *data, uint32_t width, uint32_t height)
-{
+  if (width <= 0 || height <= 0) {
+    rb_raise(rb_eArgError, "image dimensions must be positive");
+  }
+  if (width > INT_MAX / 4 ||
+      (size_t)height > SIZE_MAX / ((size_t)width * 4)) {
+    rb_raise(rb_eArgError, "image dimensions are too large");
+  }
+
+  size = (size_t)width * (size_t)height * 4;
+  data = (uint8_t*)malloc(size);
+  if (!data) {
+    rb_memerror();
+  }
+  memset(data, 0, size);
+
+  free(image->data);
   image->width  = width;
   image->height = height;
-  image->stride = width * 4;
-  image->size   = width * height * 4;
+  image->stride = (uint32_t)width * 4;
+  image->size   = size;
   image->data   = data;
   return image;
 }
 
-static mil_Image_t*
+static bool
+mil_Image_create_from_memory(mil_Image_t *image,
+                             uint8_t *data, int32_t width, int32_t height)
+{
+  if (!data || width <= 0 || height <= 0 ||
+      width > INT_MAX / 4 ||
+      (size_t)height > SIZE_MAX / ((size_t)width * 4)) {
+    free(data);
+    return false;
+  }
+
+  free(image->data);
+  image->width  = width;
+  image->height = height;
+  image->stride = (uint32_t)width * 4;
+  image->size   = (size_t)width * (size_t)height * 4;
+  image->data   = data;
+  return true;
+}
+
+static bool
 mil_Image_create_from_file(mil_Image_t *image, FILE* file)
 {
-  int32_t width;
-  int32_t height;
-  int32_t comp;
+  int32_t width = 0;
+  int32_t height = 0;
+  int32_t comp = 0;
   uint8_t *data;
   data = stbi_load_from_file(file, &width, &height, &comp, STBI_rgb_alpha);
   return mil_Image_create_from_memory(image, data, width, height);
@@ -104,9 +140,18 @@ mil_Image_create_from_file(mil_Image_t *image, FILE* file)
 static mil_Image_t*
 mil_Image_copy(mil_Image_t *dst_image, mil_Image_t *src_image)
 {
+  if (dst_image == src_image) {
+    return dst_image;
+  }
+
+  uint8_t *data = (uint8_t*)malloc(src_image->size);
+  if (!data) {
+    rb_memerror();
+  }
+  memcpy(data, src_image->data, src_image->size);
+  free(dst_image->data);
   memcpy(dst_image, src_image, sizeof(mil_Image_t));
-  dst_image->data = (uint8_t*)malloc(sizeof(uint8_t) * dst_image->size);
-  memcpy(dst_image->data, src_image->data, src_image->size);
+  dst_image->data = data;
   return dst_image;
 }
 
@@ -124,7 +169,8 @@ mil_Image_get_pixel(mil_Image_t *image, int32_t x, int32_t y)
 {
   uint32_t dest_pixel = 0x00000000;
   if (point_in_image(image, x, y)) {
-    uint8_t *src_pixel = &image->data[(x + y * image->width) * 4];
+    size_t offset = ((size_t)x + (size_t)y * (size_t)image->width) * 4;
+    uint8_t *src_pixel = &image->data[offset];
     dest_pixel  = *src_pixel++ << 16;
     dest_pixel |= *src_pixel++ << 8;
     dest_pixel |= *src_pixel++ << 0;
@@ -137,7 +183,8 @@ static void
 mil_Image_set_pixel(mil_Image_t *image, int32_t x, int32_t y, uint32_t src_pixel)
 {
   if (point_in_image(image, x, y)) {
-    uint8_t *dest_pixel    = &image->data[(x + y * image->width) * 4];
+    size_t offset = ((size_t)x + (size_t)y * (size_t)image->width) * 4;
+    uint8_t *dest_pixel = &image->data[offset];
     *dest_pixel++ = src_pixel >> 16 & 0xFF;
     *dest_pixel++ = src_pixel >> 8  & 0xFF;
     *dest_pixel++ = src_pixel >> 0  & 0xFF;
@@ -146,23 +193,42 @@ mil_Image_set_pixel(mil_Image_t *image, int32_t x, int32_t y, uint32_t src_pixel
 }
 
 static void
-Image_m_free(mil_Image_t *image)
+Image_m_free(void *ptr)
 {
-  mil_Image_free(image);
+  mil_Image_free((mil_Image_t*)ptr);
 }
+
+static size_t
+Image_m_memsize(const void *ptr)
+{
+  const mil_Image_t *image = (const mil_Image_t*)ptr;
+  return image ? sizeof(mil_Image_t) + image->size : 0;
+}
+
+static const rb_data_type_t mil_Image_data_type = {
+  .wrap_struct_name = "Minil::Image",
+  .function = {
+    .dfree = Image_m_free,
+    .dsize = Image_m_memsize,
+  },
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY,
+};
+
+#define get_image_struct(obj, image) \
+  TypedData_Get_Struct(obj, mil_Image_t, &mil_Image_data_type, image)
 
 static VALUE
 Image_m_alloc(VALUE klass)
 {
   mil_Image_t *image = mil_Image_new();
-  return Data_Wrap_Struct(klass, NULL, Image_m_free, image);
+  return TypedData_Wrap_Struct(klass, &mil_Image_data_type, image);
 }
 
 static void
 Image_m_check_image(VALUE self)
 {
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   if (!image->data) {
     rb_raise(rb_eRuntimeError, "this image data has not been allocated");
   }
@@ -179,8 +245,8 @@ Image_initialize_copy(VALUE self, VALUE other)
   Image_m_check_image(other);
   mil_Image_t *src_image;
   mil_Image_t *dst_image;
-  Data_Get_Struct(self,  mil_Image_t, dst_image);
-  Data_Get_Struct(other, mil_Image_t, src_image);
+  get_image_struct(self, dst_image);
+  get_image_struct(other, src_image);
   mil_Image_copy(dst_image, src_image);
   return self;
 }
@@ -198,7 +264,7 @@ Image_create(VALUE self, VALUE rb_v_width, VALUE rb_v_height)
   int32_t height;
   mil_Image_t *image;
 
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   width  = NUM2INT(rb_v_width);
   height = NUM2INT(rb_v_height);
   mil_Image_create(image, width, height);
@@ -217,13 +283,13 @@ Image_load_file(VALUE self, VALUE rb_v_filename)
   char *filename;
   FILE *file;
 
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   filename = StringValueCStr(rb_v_filename);
   file = fopen(filename, "rb");
   if (file) {
-    mil_Image_create_from_file(image, file);
+    bool loaded = mil_Image_create_from_file(image, file);
     fclose(file);
-    if (!image->data) {
+    if (!loaded) {
       rb_raise(rb_eRuntimeError, "Image %s failed to load properly.", filename);
     }
   } else {
@@ -251,7 +317,7 @@ Image_save_file(VALUE self, VALUE rb_v_filename)
   VALUE rb_v_extname;
   int res = 1;
 
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   width  = image->width;
   height = image->height;
   stride = image->stride;
@@ -267,7 +333,13 @@ Image_save_file(VALUE self, VALUE rb_v_filename)
   } else if (!strcmp(extname, ".tga")) {
     res = stbi_write_tga(filename, width, height, STBI_rgb_alpha, data);
   } else if (!strcmp(extname, ".hdr")) {
+    if (image->size > SIZE_MAX / sizeof(float)) {
+      rb_raise(rb_eRangeError, "image data is too large to encode as HDR");
+    }
     float* data_f32 = calloc(image->size, sizeof(float));
+    if (!data_f32) {
+      rb_memerror();
+    }
     for (size_t i = 0; i < image->size; ++i) {
       data_f32[i] = data[i] / 255.0;
     }
@@ -293,8 +365,11 @@ Image_blob(VALUE self)
 {
   Image_m_check_image(self);
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
-  return rb_str_new((char*)image->data, (int32_t)image->size);
+  get_image_struct(self, image);
+  if (image->size > LONG_MAX) {
+    rb_raise(rb_eRangeError, "image data is too large for a Ruby String");
+  }
+  return rb_str_new((char*)image->data, (long)image->size);
 }
 
 /*
@@ -306,7 +381,7 @@ Image_width(VALUE self)
 {
   Image_m_check_image(self);
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   return INT2NUM(image->width);
 }
 
@@ -319,7 +394,7 @@ Image_height(VALUE self)
 {
   Image_m_check_image(self);
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   return INT2NUM(image->height);
 }
 
@@ -332,8 +407,8 @@ Image_size(VALUE self)
 {
   Image_m_check_image(self);
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
-  return INT2NUM(image->size);
+  get_image_struct(self, image);
+  return SIZET2NUM(image->size);
 }
 
 /*
@@ -350,7 +425,7 @@ Image_get_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y)
   Image_m_check_image(self);
   int x, y;
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   x = NUM2INT(rb_v_x);
   y = NUM2INT(rb_v_y);
   return LONG2NUM((uint64_t)mil_Image_get_pixel(image, x, y));
@@ -372,7 +447,7 @@ Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)
   int x, y;
 
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   x = NUM2INT(rb_v_x);
   y = NUM2INT(rb_v_y);
 
@@ -383,7 +458,7 @@ Image_set_pixel(VALUE self, VALUE rb_v_x, VALUE rb_v_y, VALUE rb_v_pixel)
 }
 
 static bool
-adjust_invert_rect(int *x, int *y, int *w, int *h)
+adjust_invert_rect(int64_t *x, int64_t *y, int64_t *w, int64_t *h)
 {
   if (*w < 0) {
     *x += *w;
@@ -399,24 +474,27 @@ adjust_invert_rect(int *x, int *y, int *w, int *h)
 }
 
 static bool
-adjust_rect_to_fit_texture(mil_Image_t *image, int *x, int *y, int *w, int *h)
+adjust_rect_to_fit_texture(mil_Image_t *image,
+                           int64_t *x, int64_t *y, int64_t *w, int64_t *h)
 {
-  if (image->width < *x || image->height < *y) return false;
   if (*w == 0 || *h == 0) return false;
   adjust_invert_rect(x, y, w, h);
-  //if (*w <= 0 || *h <= 0) return false;
+
+  if (*x >= image->width || *y >= image->height) return false;
 
   if (*x < 0) {
+    if (*x <= -*w) return false;
     *w += *x;
     *x = 0;
   }
   if (*y < 0) {
+    if (*y <= -*h) return false;
     *h += *y;
     *y = 0;
   }
 
-  if ((*x + *w) > image->width) *w -= (*x + *w) - image->width;
-  if ((*y + *h) > image->height) *h -= (*y + *h) - image->height;
+  if (*w > image->width - *x) *w = image->width - *x;
+  if (*h > image->height - *y) *h = image->height - *y;
 
   if (*w <= 0 || *h <= 0) return false;
 
@@ -425,14 +503,46 @@ adjust_rect_to_fit_texture(mil_Image_t *image, int *x, int *y, int *w, int *h)
 
 static bool
 adjust_rect_to_fit_texture_blit(mil_Image_t *src_image, mil_Image_t *dest_image,
-  int *x, int *y, int *sx, int *sy, int *sw, int *sh)
+  int64_t *x, int64_t *y, int64_t *sx, int64_t *sy, int64_t *sw, int64_t *sh)
 {
-  if (!adjust_rect_to_fit_texture(src_image, sx, sy, sw, sh)) {
-    return false;
+  if (*sw == 0 || *sh == 0) return false;
+  adjust_invert_rect(sx, sy, sw, sh);
+
+  if (*sx < 0) {
+    int64_t delta = -*sx;
+    *sx = 0;
+    *x += delta;
+    *sw -= delta;
   }
-  if (!adjust_rect_to_fit_texture(dest_image, x, y, sw, sh)) {
-    return false;
+  if (*sy < 0) {
+    int64_t delta = -*sy;
+    *sy = 0;
+    *y += delta;
+    *sh -= delta;
   }
+  if (*x < 0) {
+    int64_t delta = -*x;
+    *x = 0;
+    *sx += delta;
+    *sw -= delta;
+  }
+  if (*y < 0) {
+    int64_t delta = -*y;
+    *y = 0;
+    *sy += delta;
+    *sh -= delta;
+  }
+
+  if (*sw <= 0 || *sh <= 0 ||
+      *sx >= src_image->width || *sy >= src_image->height ||
+      *x >= dest_image->width || *y >= dest_image->height) return false;
+
+  if (*sw > src_image->width - *sx) *sw = src_image->width - *sx;
+  if (*sh > src_image->height - *sy) *sh = src_image->height - *sy;
+  if (*sw > dest_image->width - *x) *sw = dest_image->width - *x;
+  if (*sh > dest_image->height - *y) *sh = dest_image->height - *y;
+
+  if (*sw <= 0 || *sh <= 0) return false;
   return true;
 }
 
@@ -444,11 +554,11 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
   Image_m_check_image(self);
   struct mil_Color color;
   uint8_t *pixels;
-  int x, y, w, h;
-  int64_t padding;
+  int64_t x, y, w, h;
+  size_t padding;
 
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   x = NUM2INT(rb_v_x);
   y = NUM2INT(rb_v_y);
   w = NUM2INT(rb_v_w);
@@ -459,17 +569,21 @@ Image_fill_rect(VALUE self, VALUE rb_v_x, VALUE rb_v_y,
   }
 
   color = mil_Color_from_ruby(rb_v_color);
+  uint8_t r = color.value >> 16 & 0xFF;
+  uint8_t g = color.value >> 8 & 0xFF;
+  uint8_t b = color.value & 0xFF;
+  uint8_t a = color.value >> 24 & 0xFF;
 
-  pixels = &image->data[(x + y * image->width) * 4];
+  pixels = &image->data[((size_t)x + (size_t)y * (size_t)image->width) * 4];
 
-  padding = (image->width - w) * 4;
+  padding = ((size_t)image->width - (size_t)w) * 4;
 
-  for (int i = 0; i < h; ++i, pixels += padding) {
-    for (int j = 0; j < w; ++j) {
-      *pixels++ = color.r;
-      *pixels++ = color.g;
-      *pixels++ = color.b;
-      *pixels++ = color.a;
+  for (int64_t i = 0; i < h; ++i, pixels += padding) {
+    for (int64_t j = 0; j < w; ++j) {
+      *pixels++ = r;
+      *pixels++ = g;
+      *pixels++ = b;
+      *pixels++ = a;
     }
   }
 
@@ -496,21 +610,22 @@ Image_blit(VALUE self, VALUE rb_v_img, VALUE rb_v_x, VALUE rb_v_y,
 
   uint8_t *src_pixels;
   uint8_t *dest_pixels;
-  int32_t x;
-  int32_t y;
-  int32_t sx;
-  int32_t sy;
-  int32_t sw;
-  int32_t sh;
+  int64_t x;
+  int64_t y;
+  int64_t sx;
+  int64_t sy;
+  int64_t sw;
+  int64_t sh;
 
-  int32_t src_padding;
-  int32_t dest_padding;
+  size_t src_stride;
+  size_t dest_stride;
+  uint8_t *copy = NULL;
 
   mil_Image_t *src_image;
   mil_Image_t *dest_image;
 
-  Data_Get_Struct(rb_v_img, mil_Image_t, src_image);
-  Data_Get_Struct(self, mil_Image_t, dest_image);
+  get_image_struct(rb_v_img, src_image);
+  get_image_struct(self, dest_image);
 
   x = NUM2INT(rb_v_x);
   y = NUM2INT(rb_v_y);
@@ -523,18 +638,35 @@ Image_blit(VALUE self, VALUE rb_v_img, VALUE rb_v_x, VALUE rb_v_y,
     return self;
   }
 
-  src_pixels = &src_image->data[(sx + sy * src_image->width) * 4];
-  dest_pixels = &dest_image->data[(x + y * dest_image->width) * 4];
+  src_pixels = &src_image->data[((size_t)sx + (size_t)sy * (size_t)src_image->width) * 4];
+  dest_pixels = &dest_image->data[((size_t)x + (size_t)y * (size_t)dest_image->width) * 4];
 
-  src_padding  = src_image->width * 4;
-  dest_padding = dest_image->width * 4;
+  src_stride = src_image->stride;
+  dest_stride = dest_image->stride;
+
+  if (src_image == dest_image &&
+      x < sx + sw && x + sw > sx && y < sy + sh && y + sh > sy) {
+    size_t copy_stride = (size_t)sw * 4;
+    copy = (uint8_t*)malloc(copy_stride * (size_t)sh);
+    if (!copy) {
+      rb_memerror();
+    }
+    for (int64_t i = 0; i < sh; ++i) {
+      memcpy(copy + (size_t)i * copy_stride,
+             src_pixels + (size_t)i * src_stride,
+             copy_stride);
+    }
+    src_pixels = copy;
+    src_stride = copy_stride;
+  }
 
   // Debug stuff
   //printf("blit(x: %d, y: %d, sx: %d, sy: %d, sw: %d, sh: %d, sp: %d, dp: %d)\n",
   //       x, y, sx, sy, sw, sh, src_padding, dest_padding);
-  for (int i = 0; i < sh; ++i, src_pixels += src_padding, dest_pixels += dest_padding) {
+  for (int64_t i = 0; i < sh; ++i, src_pixels += src_stride, dest_pixels += dest_stride) {
     memcpy(dest_pixels, src_pixels, sw * 4);
   }
+  free(copy);
   return self;
 }
 
@@ -560,22 +692,23 @@ Image_alpha_blit(VALUE self, VALUE rb_v_img, VALUE rb_v_x, VALUE rb_v_y,
 
   uint8_t *src_pixels;
   uint8_t *dest_pixels;
-  int32_t x;
-  int32_t y;
-  int32_t sx;
-  int32_t sy;
-  int32_t sw;
-  int32_t sh;
+  int64_t x;
+  int64_t y;
+  int64_t sx;
+  int64_t sy;
+  int64_t sw;
+  int64_t sh;
   int32_t alpha;
 
-  int32_t src_padding;
-  int32_t dest_padding;
+  size_t src_stride;
+  size_t dest_stride;
+  uint8_t *copy = NULL;
 
   mil_Image_t *src_image;
   mil_Image_t *dest_image;
 
-  Data_Get_Struct(rb_v_img, mil_Image_t, src_image);
-  Data_Get_Struct(self, mil_Image_t, dest_image);
+  get_image_struct(rb_v_img, src_image);
+  get_image_struct(self, dest_image);
 
   x = NUM2INT(rb_v_x);
   y = NUM2INT(rb_v_y);
@@ -591,34 +724,58 @@ Image_alpha_blit(VALUE self, VALUE rb_v_img, VALUE rb_v_x, VALUE rb_v_y,
     return self;
   }
 
-  src_pixels = &src_image->data[(sx + sy * src_image->width) * 4];
-  dest_pixels = &dest_image->data[(x + y * dest_image->width) * 4];
+  src_pixels = &src_image->data[((size_t)sx + (size_t)sy * (size_t)src_image->width) * 4];
+  dest_pixels = &dest_image->data[((size_t)x + (size_t)y * (size_t)dest_image->width) * 4];
 
-  src_padding = (src_image->width - sw) * 4;
-  dest_padding = (dest_image->width - sw) * 4;
+  src_stride = src_image->stride;
+  dest_stride = dest_image->stride;
+
+  if (src_image == dest_image &&
+      x < sx + sw && x + sw > sx && y < sy + sh && y + sh > sy) {
+    size_t copy_stride = (size_t)sw * 4;
+    copy = (uint8_t*)malloc(copy_stride * (size_t)sh);
+    if (!copy) {
+      rb_memerror();
+    }
+    for (int64_t i = 0; i < sh; ++i) {
+      memcpy(copy + (size_t)i * copy_stride,
+             src_pixels + (size_t)i * src_stride,
+             copy_stride);
+    }
+    src_pixels = copy;
+    src_stride = copy_stride;
+  }
 
   // Debug stuff
   //printf("alpha_blit(x: %d, y: %d, sx: %d, sy: %d, sw: %d, sh: %d, sp: %d, dp: %d, alpha: %d)\n",
   //       x, y, sx, sy, sw, sh, src_padding, dest_padding, alpha);
 
-  for (int i = 0; i < sh; ++i, src_pixels += src_padding, dest_pixels += dest_padding) {
-    for (int j = 0; j < sw; ++j) {
-      // Sadly, alpha is the 4th value, so you I have to fetch it first
-      // and then set it after processing the first 3 channels
-      // FML
-      uint8_t a1 = dest_pixels[3];
-      uint8_t beta = mil_int_min(255, (src_pixels[3] * alpha) >> 8);
-      uint8_t a = beta > a1 ? beta : a1;
+  for (int64_t i = 0; i < sh; ++i) {
+    uint8_t *src_pixel = src_pixels + (size_t)i * src_stride;
+    uint8_t *dest_pixel = dest_pixels + (size_t)i * dest_stride;
+    for (int64_t j = 0; j < sw; ++j, src_pixel += 4, dest_pixel += 4) {
+      uint32_t src_alpha = ((uint32_t)src_pixel[3] * (uint32_t)alpha + 127) / 255;
+      uint32_t dest_alpha = dest_pixel[3];
+      uint32_t inverse_alpha = 255 - src_alpha;
+      uint32_t out_alpha_numerator = src_alpha * 255 + dest_alpha * inverse_alpha;
+
+      if (out_alpha_numerator == 0) {
+        memset(dest_pixel, 0, 4);
+        continue;
+      }
 
       for (int k = 0; k < 3; ++k) {
-        uint8_t d = *dest_pixels;
-        (*dest_pixels++) = mil_int_min(255, mil_int_max(d + ((((*src_pixels++) - d) * beta) >> 8), 0));
+        uint32_t color_numerator =
+          (uint32_t)src_pixel[k] * src_alpha * 255 +
+          (uint32_t)dest_pixel[k] * dest_alpha * inverse_alpha;
+        dest_pixel[k] = (uint8_t)((color_numerator + out_alpha_numerator / 2) /
+                                  out_alpha_numerator);
       }
-      (*dest_pixels++) = a;
-      ++src_pixels;
+      dest_pixel[3] = (uint8_t)((out_alpha_numerator + 127) / 255);
     }
   }
 
+  free(copy);
   return self;
 }
 
@@ -630,7 +787,7 @@ static VALUE
 Image_inspect(VALUE self)
 {
   mil_Image_t *image;
-  Data_Get_Struct(self, mil_Image_t, image);
+  get_image_struct(self, image);
   char str[256];
   snprintf(str, sizeof(str),
            "<%s width: %d, height: %d>",

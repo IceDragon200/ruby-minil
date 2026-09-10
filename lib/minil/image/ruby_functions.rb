@@ -28,6 +28,7 @@ module Minil
     end
 
     def rb_alpha_blit(img, ax, ay, sx, sy, w, h, alpha = 255)
+      alpha = [[alpha, 0].max, 255].min
       h.times do |y|
         w.times do |x|
           c1 = get_pixel(x + ax, y + ay)
@@ -40,11 +41,19 @@ module Minil
           r2 = (c2 >> 16) & 0xFF
           g2 = (c2 >>  8) & 0xFF
           b2 = (c2 >>  0) & 0xFF
-          beta = (a2 * alpha) >> 8
-          c  = (beta > a1 ? beta : a1) << 24
-          c |= [[r1 + (((r2 - r1) * beta) >> 8), 255].min, 0].max << 16
-          c |= [[g1 + (((g2 - g1) * beta) >> 8), 255].min, 0].max <<  8
-          c |= [[b1 + (((b2 - b1) * beta) >> 8), 255].min, 0].max <<  0
+          src_alpha = (a2 * alpha + 127) / 255
+          inverse_alpha = 255 - src_alpha
+          out_alpha_numerator = src_alpha * 255 + a1 * inverse_alpha
+          if out_alpha_numerator == 0
+            set_pixel(x + ax, y + ay, 0)
+            next
+          end
+
+          r = (r2 * src_alpha * 255 + r1 * a1 * inverse_alpha + out_alpha_numerator / 2) / out_alpha_numerator
+          g = (g2 * src_alpha * 255 + g1 * a1 * inverse_alpha + out_alpha_numerator / 2) / out_alpha_numerator
+          b = (b2 * src_alpha * 255 + b1 * a1 * inverse_alpha + out_alpha_numerator / 2) / out_alpha_numerator
+          a = (out_alpha_numerator + 127) / 255
+          c = a << 24 | r << 16 | g << 8 | b
           set_pixel(x + ax, y + ay, c)
         end
       end

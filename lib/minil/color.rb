@@ -47,7 +47,7 @@ module Minil
     end
 
     def -(other)
-      self.class.rgba(other.r - r, other.g - g, other.b - b, other.a - a)
+      self.class.rgba(r - other.r, g - other.g, b - other.b, a - other.a)
     end
 
     def *(other)
@@ -55,7 +55,7 @@ module Minil
     end
 
     def /(other)
-      self.class.rgba(other.r / r, other.g / g, other.b / b, other.a / a)
+      self.class.rgba(r / other.r, g / other.g, b / other.b, a / other.a)
     end
 
     def opaque
@@ -84,6 +84,10 @@ module Minil
     end
 
     def self.encode(r, g, b, a)
+      r = [[r.to_i, 0].max, 255].min
+      g = [[g.to_i, 0].max, 255].min
+      b = [[b.to_i, 0].max, 255].min
+      a = [[a.to_i, 0].max, 255].min
       a << 24 | r << 16 | g << 8 | b
     end
 

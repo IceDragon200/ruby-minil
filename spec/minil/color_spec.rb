@@ -104,4 +104,22 @@ describe Minil::Color do
       expect(color.a).to eq(128)
     end
   end
+
+  context 'arithmetic' do
+    it 'subtracts the right operand from the receiver and clamps channels' do
+      color = Minil::Color.rgba(100, 80, 60, 40) - Minil::Color.rgba(10, 20, 70, 5)
+
+      expect(color.to_a).to eq([90, 60, 0, 35])
+    end
+
+    it 'divides the receiver by the right operand' do
+      color = Minil::Color.rgba(100, 80, 60, 40) / Minil::Color.rgba(10, 20, 30, 5)
+
+      expect(color.to_a).to eq([10, 4, 2, 8])
+    end
+
+    it 'clamps directly constructed channels' do
+      expect(Minil::Color.rgba(300, -1, 20, 999).to_a).to eq([255, 0, 20, 255])
+    end
+  end
 end

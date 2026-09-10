@@ -43,10 +43,6 @@ module Minil
     # @param [Integer] h
     # @return [Array<Integer>]
     def fit_rect(x, y, w, h)
-      #if w < 0 || h < 0
-      #  return x, y, 0, 0
-      #end
-
       if w < 0
         x += w
         w = -w
@@ -57,23 +53,12 @@ module Minil
         h = -h
       end
 
-      if x < 0
-        w += x
-        x = 0
-      end
+      left = [[x, 0].max, width].min
+      top = [[y, 0].max, height].min
+      right = [[x + w, 0].max, width].min
+      bottom = [[y + h, 0].max, height].min
 
-      if y < 0
-        h += y
-        y = 0
-      end
-
-      x2 = x + w
-      y2 = y + h
-
-      w -= x2 - width if x2 >= width
-      h -= y2 - height if y2 >= height
-
-      return x, y, w, h
+      return left, top, [right - left, 0].max, [bottom - top, 0].max
     end
 
     # @return [Minil::Rect] rect representing the size of the image
@@ -121,7 +106,7 @@ module Minil
       bd = b2 - b1
 
       if v
-        m = h
+        m = [h - 1, 1].max
         h.times do |n|
           c  = [[a1 + ad * n / m, 255].min, 0].max << 24
           c |= [[r1 + rd * n / m, 255].min, 0].max << 16
@@ -130,7 +115,7 @@ module Minil
           fill_rect(x, y + n, w, 1, c)
         end
       else
-        m = w
+        m = [w - 1, 1].max
         w.times do |n|
           c  = [[a1 + ad * n / m, 255].min, 0].max << 24
           c |= [[r1 + rd * n / m, 255].min, 0].max << 16
@@ -152,6 +137,9 @@ module Minil
     end
 
     def blit_fill(img, x, y, dw, dh, sx, sy, sw, sh)
+      raise ArgumentError, "source dimensions must be positive" if sw <= 0 || sh <= 0
+      return self if dw <= 0 || dh <= 0
+
       w_segs, w_rem = *dw.divmod(sw)
       h_segs, h_rem = *dh.divmod(sh)
       w_segs.times do |xi|
@@ -159,13 +147,15 @@ module Minil
         h_segs.times do |yi|
           blit img, dx, y + yi * sh, sx, sy, sw, sh
         end
-        blit dx, y + h_segs * sh, img, sx, sy, sw, h_rem
+        blit img, dx, y + h_segs * sh, sx, sy, sw, h_rem if h_rem > 0
       end
       dx = x + w_segs * sw
-      h_segs.times do |yi|
-        blit dx, y + yi * sh, img, sx, sy, w_rem, sh
+      if w_rem > 0
+        h_segs.times do |yi|
+          blit img, dx, y + yi * sh, sx, sy, w_rem, sh
+        end
+        blit img, dx, y + h_segs * sh, sx, sy, w_rem, h_rem if h_rem > 0
       end
-      blit dx, y + h_segs * sh, img, sx, sy, w_rem, h_rem
       self
     end
 
@@ -187,6 +177,9 @@ module Minil
     end
 
     def alpha_blit_fill(img, x, y, dw, dh, sx, sy, sw, sh, alpha = 255)
+      raise ArgumentError, "source dimensions must be positive" if sw <= 0 || sh <= 0
+      return self if dw <= 0 || dh <= 0
+
       w_segs, w_rem = *dw.divmod(sw)
       h_segs, h_rem = *dh.divmod(sh)
       w_segs.times do |xi|
@@ -194,20 +187,22 @@ module Minil
         h_segs.times do |yi|
           alpha_blit img, dx, y + yi * sh, sx, sy, sw, sh, alpha
         end
-        alpha_blit dx, y + h_segs * sh, img, sx, sy, sw, h_rem, alpha
+        alpha_blit img, dx, y + h_segs * sh, sx, sy, sw, h_rem, alpha if h_rem > 0
       end
       dx = x + w_segs * sw
-      h_segs.times do |yi|
-        alpha_blit dx, y + yi * sh, img, sx, sy, w_rem, sh, alpha
+      if w_rem > 0
+        h_segs.times do |yi|
+          alpha_blit img, dx, y + yi * sh, sx, sy, w_rem, sh, alpha
+        end
+        alpha_blit img, dx, y + h_segs * sh, sx, sy, w_rem, h_rem, alpha if h_rem > 0
       end
-      alpha_blit dx, y + h_segs * sh, img, sx, sy, w_rem, h_rem, alpha
       self
     end
 
     def alpha_blit_fill_rr(img, dest_rect, src_rect, alpha = 255)
       x, y, dw, dh = *dest_rect
       sx, sy, sw, sh = *src_rect
-      blit_fill(img, x, y, dw, dh, sx, sy, sw, sh, alpha)
+      alpha_blit_fill(img, x, y, dw, dh, sx, sy, sw, sh, alpha)
     end
 
     def subimage(x, y, w, h)
@@ -233,12 +228,47 @@ module Minil
     # @param [Integer] sh
     # @return [self]
     def mask_blit(img, mask, x, y, sx, sy, sw, sh)
-      if img.width != mask.width || img.height != mask.width
+      if img.width != mask.width || img.height != mask.height
         raise ArgumentError, "Mask must be the same size as provided image"
       end
 
-      sx, sy, sw, sh = img.fit_rect(sx, sy, sw, sh)
-      x, y, sw, sh = fit_rect(x, y, sw, sh)
+      if sw < 0
+        sx += sw
+        sw = -sw
+      end
+      if sh < 0
+        sy += sh
+        sh = -sh
+      end
+
+      if sx < 0
+        delta = -sx
+        sx = 0
+        x += delta
+        sw -= delta
+      end
+      if sy < 0
+        delta = -sy
+        sy = 0
+        y += delta
+        sh -= delta
+      end
+      if x < 0
+        delta = -x
+        x = 0
+        sx += delta
+        sw -= delta
+      end
+      if y < 0
+        delta = -y
+        y = 0
+        sy += delta
+        sh -= delta
+      end
+
+      sw = [sw, img.width - sx, width - x].min
+      sh = [sh, img.height - sy, height - y].min
+      return self if sw <= 0 || sh <= 0
 
       sh.times do |row|
         sw.times do |col|
@@ -447,12 +477,12 @@ module Minil
       ox = [x, 0].min.abs
       oy = [y, 0].min.abs
       result = self.class.create(width + x.abs, height + y.abs)
-      if x == 0 || y != 0
+      if x == 0
         # vertical skew
         width.times do |i|
           result.blit(self, i, oy + (y * i / width), i, 0, 1, height)
         end
-      elsif y == 0 || x != 0
+      elsif y == 0
         # horizontal skew
         height.times do |i|
           result.blit(self, ox + (x * i / height), i, 0, i, width, 1)
@@ -460,9 +490,9 @@ module Minil
       else
         height.times do |i|
           width.times do |j|
-            result.set_pixel(ox + j + (x * j / width),
-                             oy + i + (y * i / height),
-                             get_pixel(i, j))
+            result.set_pixel(ox + j + (x * i / height),
+                             oy + i + (y * j / width),
+                             get_pixel(j, i))
           end
         end
       end
@@ -526,6 +556,10 @@ module Minil
     end
 
     def upscale(xs, ys = xs)
+      unless xs.is_a?(Integer) && ys.is_a?(Integer) && xs > 0 && ys > 0
+        raise ArgumentError, "upscale factors must be positive integers"
+      end
+
       img = self.class.create(width * xs, height * ys)
       height.times do |y|
         width.times do |x|
@@ -541,6 +575,10 @@ module Minil
     end
 
     def downscale(xs, ys = xs)
+      unless xs.is_a?(Integer) && ys.is_a?(Integer) && xs > 0 && ys > 0
+        raise ArgumentError, "downscale divisors must be positive integers"
+      end
+
       img = self.class.create(width / xs, height / ys)
       img.height.times do |y|
         img.width.times do |x|
@@ -552,10 +590,14 @@ module Minil
     end
 
     def scale(xs, ys = xs)
+      unless xs.is_a?(Numeric) && ys.is_a?(Numeric) && xs.positive? && ys.positive?
+        raise ArgumentError, "scale factors must be positive numbers"
+      end
+
       if xs < 1 && ys < 1
-        downscale((xs / 1.0).to_i, (ys / 1.0).to_i)
+        resize([(width * xs).floor, 1].max, [(height * ys).floor, 1].max)
       elsif xs >= 1 && ys >= 1
-        upscale(xs, ys)
+        resize([(width * xs).floor, 1].max, [(height * ys).floor, 1].max)
       else
         raise ArgumentError, "Mismatch scales, you cannot downscale and upscale at the same time."
       end
