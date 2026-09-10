@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    minil (0.23.0)
+    minil (0.24.0)
 
 GEM
   remote: https://rubygems.org/

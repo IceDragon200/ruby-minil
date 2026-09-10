@@ -1,3 +1,5 @@
 require 'minil/image'
 require 'minil/color'
 require 'minil/rect'
+require 'minil/barcode'
+require 'minil/qrcode'
